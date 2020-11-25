@@ -1,2 +1,2 @@
-* Test
-** Test2
+* Logo Generator
+This Programm trains & uses a GAN to generate Logos
