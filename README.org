@@ -1,2 +1,3 @@
 * Logo Generator
 This Programm trains & uses a GAN to generate Logos
+The Data was provided here: [[https://drive.google.com/drive/folders/1PTA24UTZcsnzXPN1gmV0_lRg3lMHqwp6][Dataset-Logo-2k]]
