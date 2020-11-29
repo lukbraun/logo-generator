@@ -131,3 +131,4 @@ dmypy.json
 # dataset
 train_and_test/
 train_and_test.zip
+imgs/

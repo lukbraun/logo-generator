@@ -18,7 +18,11 @@ TEST_PATH = "train_and_test/test/"
 TRAIN_PATH = "train_and_test/train/"
 # Maxmum Number of Images per company
 COMPANY_COUNT_MAX = 2
-HEIGHT_AND_WIDTH = 64
+HEIGHT_AND_WIDTH = 32
+
+#############
+# Load Data #
+#############
 
 def load_data_from_path(path):
     """
@@ -43,7 +47,11 @@ def load_data_from_path(path):
     return (np.array(imgs), category)
 
 def load_data():
+    """
+    convenience function for loading Training & Test
+    """
     (train_data, train_labels) = load_data_from_path(TRAIN_PATH)
+    # (test_data, test_labels) = load_data_from_path(TEST_PATH)
     return (train_data, train_labels)
 
 def check_categories(train_labels):
@@ -58,14 +66,14 @@ def check_categories(train_labels):
         return acc
     print(reduce(count, train_labels, {}))
 
-def adam_optimizer():
-    return Adam(lr=0.0002, beta_1=0.5)
-
 ##############
 # Generator  #
 ##############
 
 def create_generator():
+    """
+    Creates a generator, which generates Images out of random noise (numpy array)
+    """
     generator = Sequential()
     nodes = HEIGHT_AND_WIDTH ** 2 * 4
     generator.add(Dense(nodes, input_dim=16))
@@ -73,11 +81,10 @@ def create_generator():
 
     generator.add(Conv2DTranspose(HEIGHT_AND_WIDTH, (4,4), strides=(2,2), activation="relu"))
     generator.add(Conv2DTranspose(HEIGHT_AND_WIDTH, (4,4), strides=(2,2), activation="relu"))
-    generator.add(Conv2D(3,(136,136),activation="sigmoid"))
+    generator.add(Conv2D(3,(71,71),activation="sigmoid"))
     # generator.add(Conv2D(3,(132,132),activation="sigmoid"))
     generator.add(MaxPool2D(2, padding='same'))
 
-    generator.compile(loss='binary_crossentropy',optimizer=adam_optimizer())
     return generator
 
 #################
@@ -85,6 +92,9 @@ def create_generator():
 #################
 
 def create_discriminator():
+    """
+    Create Discriminator, which classifies a given images as either real or fake
+    """
     discriminator = Sequential()
     discriminator.add(Input(shape=(HEIGHT_AND_WIDTH,HEIGHT_AND_WIDTH,3)))
     discriminator.add(Conv2D(HEIGHT_AND_WIDTH/4, (3, 3)))
@@ -94,7 +104,7 @@ def create_discriminator():
     discriminator.add(Flatten())
     discriminator.add(Dense(1,activation="sigmoid"))
 
-    discriminator.compile(loss='categorical_crossentropy', optimizer=adam_optimizer())
+    discriminator.compile(loss='binary_crossentropy', sample_weight_mode="temporal", optimizer="adam")
     return discriminator
 
 #######
@@ -102,55 +112,64 @@ def create_discriminator():
 #######
 
 def create_gan(dis,gen):
+    """
+    Create a GAN from a given discriminator & generator
+    """
     dis.trainable = False
-    gan_input = Input(shape=(16,))
-    x = gen(gan_input)
-    gan_output = dis(x)
-    gan = Model(inputs=gan_input,outputs=gan_output)
-    gan.compile(loss='binary_crossentropy', optimizer="adam")
+    gan = Sequential()
+    gan.add(gen)
+    gan.add(dis)
+    gan.compile(loss='binary_crossentropy', sample_weight_mode="temporal", optimizer="adam")
     return gan
 
 
-def plot_generated_images(epoch, generator, examples=100, dim=(10,10), figsize=(10,10)):
+def plot_generated_images(epoch, generator, batch_size, examples=100, dim=(10,10), figsize=(10,10)):
+    """
+    Plot random Images from the trainied GAN
+    """
     noise = np.random.normal(0,1,[batch_size, 16])
     generated_images = generator.predict(noise)
     print(generated_images.shape)
-    generated_images = generated_images.reshape(100,28,28)
-    plt.figure(figsize=figsize)
-    for i in range(generated_images.shape[0]):
-        plt.subplot(dim[0], dim[1], i+1)
-        plt.imshow(generated_images[i], interpolation='nearest')
-        plt.axis('off')
-    plt.tight_layout()
-    plt.savefig('gan_generated_image-%d.png' %epoch)
-    print("saved")
+    i = 1
+    for generated_image in generated_images:
+        img = Image.fromarray(generated_image, "RGB")
+        img.save("imgs/generated_image.epoch" + str(epoch) + ".batch" + str(i) + ".png")
+        i += 1
 
-def training(epochs=1, batch_size=128):
-    (x_train, x_label) = load_data()
-    batch_count = x_train.shape[0] / batch_size
+############
+# Training #
+############
 
+def training(epochs=10, batch_size=128):
+    (x_train, _) = load_data()
+
+    # create generator
     generator = create_generator()
+    # create discriminator
     discriminator = create_discriminator()
-    discriminator.summary()
-    generator.summary()
+    # discriminator.summary()
+    # generator.summary()
     gan = create_gan(gen=generator, dis=discriminator)
 
     for e in range(1, epochs+1):
         print("Epoch %d" %e)
-        for _ in tqdm(range(batch_size)):
-            noise = np.random.normal(0,1,[batch_size, 16])
-            generated_images = generator.predict(noise)
-            image_batch = x_train[np.random.randint(low=0,high=x_train.shape[0],size=batch_size)]
-            x = np.concatenate([image_batch, generated_images])
-            y_dis = np.zeros(2*batch_size)
-            y_dis[:batch_size] = 0.9
-            discriminator.trainable = True
-            discriminator.train_on_batch(x, y_dis)
-            noise = np.random.normal(0,1, [batch_size, 16])
-            y_gen = np.ones(batch_size)
-            discriminator.trainable = False
-            gan.train_on_batch(noise, y_gen)
-        if e == 1 or e % 20 == 0:
-            plot_generated_images(e, generator)
+        # The generator generates Images from random noise
+        noise = np.random.normal(0,1,[batch_size, 16])
+        # Generate random images
+        generated_images = generator.predict(noise)
+        image_batch = x_train[np.random.randint(low=0,high=x_train.shape[0],size=batch_size)]
+        # create set of random images and real ones
+        x = np.concatenate([image_batch, generated_images])
+        y_dis = np.zeros(2*batch_size)
+        y_dis[:batch_size] = 0.9
+        discriminator.trainable = True
+        # train discriminator
+        discriminator.train_on_batch(x, y_dis)
+        noise = np.random.normal(0,1, [batch_size, 16])
+        y_gen = np.ones(batch_size)
+        discriminator.trainable = False
+        # train gan
+        gan.train_on_batch(noise, y_gen)
+        plot_generated_images(e, generator, batch_size)
 
-training(20,1)
+training(100, 32)

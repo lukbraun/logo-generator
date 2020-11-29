@@ -3,3 +3,29 @@ This Programm trains & uses a GAN to generate Logos.
 The Data was provided here: [[https://drive.google.com/drive/folders/1PTA24UTZcsnzXPN1gmV0_lRg3lMHqwp6][Dataset-Logo-2k]].
 
 This project was setup with Anaconda python. `environment.yml` contains all used packages.
+
+** Structure
+Basically a GAN consists of 2 Neural Nets:
+- Generator
+  The Generator generates artifical images
+- Discriminator
+  The Discriminator classifies an given Image as Real or Artifical
+
+** Results
+The results couldn't yield any good results as you can see in the given examples:
+#+attr_org: :width 256px
+[[./examples/1.png]]
+#+attr_org: :width 256px
+[[./examples/2.png]]
+#+attr_org: :width 256px
+[[./examples/3.png]]
+#+attr_org: :width 256px
+[[./examples/4.png]]
+#+attr_org: :width 256px
+[[./examples/5.png]]
+#+attr_org: :width 256px
+[[./examples/6.png]]
+#+attr_org: :width 256px
+[[./examples/7.png]]
+
+I didn't investigate any further why this is the case.
