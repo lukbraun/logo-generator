@@ -12,7 +12,7 @@ Basically a GAN consists of 2 Neural Nets:
   The Discriminator classifies an given Image as Real or Artifical
 
 ** Results
-The results couldn't yield any good results as you can see in the given examples:
+I couldn't yield any good results as you can see in the given examples:
 #+attr_org: :width 256px
 [[./examples/1.png]]
 #+attr_org: :width 256px
